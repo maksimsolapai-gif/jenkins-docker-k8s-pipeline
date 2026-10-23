@@ -2,7 +2,6 @@ pipeline {
     agent any
 
     options {
-        // Условие задания: общий таймаут на весь пайплайн — 1 час
         timeout(time: 1, unit: 'HOURS') 
         ansiColor('xterm')
     }
@@ -16,18 +15,25 @@ pipeline {
         }
 
         stage('Lint Dockerfile') {
+            // Говорим Jenkins выполнить этот конкретный шаг ВНУТРИ контейнера Hadolint
+            agent {
+                docker { 
+                    image 'hadolint/hadolint:latest-alpine'
+                    // Этот аргумент заставляет контейнер запуститься во временном режиме
+                    args '-u root'
+                }
+            }
             steps {
                 echo "=== Шаг 1.2: Валидация Dockerfile линтером hadolint ==="
-                // Запускаем hadolint через официальный Docker-контейнер, передавая локальный Dockerfile
-                sh 'docker run --rm -i hadolint/hadolint < Dockerfile'
+                // Внутри контейнера hadolint бинарник доступен напрямую!
+                sh 'hadolint Dockerfile'
             }
         }
 
         stage('Build Image') {
             steps {
                 echo "=== Шаг 1.3: Сборка Docker-образа приложения ==="
-                // Собираем локальный образ с тегом текущей сборки Jenkins
-                sh 'docker build -t local-app-test:${BUILD_NUMBER} .'
+                echo "На этом шаге мы настроим Docker-сборщик (Kaniko или Docker-в-K8s)"
             }
         }
     }
