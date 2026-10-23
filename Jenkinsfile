@@ -91,10 +91,12 @@ spec:
                 expression { return env.GIT_BRANCH && env.GIT_BRANCH.endsWith('main') }
             }
             steps {
-                // Возвращаемся в контейнер 'tester' для шагов деплоя
                 container('tester') {
                     echo "=== Деплой в Pre-Prod через контейнер TESTER ==="
-                    sh "echo 'kubectl apply -f k8s/deployment.yaml -n pre-prod'"
+                    // ИСПРАВЛЕНО: добавляем многострочный блок с шебангом
+                    sh '''#!/bin/sh
+                    echo "kubectl apply -f k8s/deployment.yaml -n pre-prod"
+                    '''
                 }
             }
         }
@@ -119,11 +121,15 @@ spec:
             steps {
                 container('tester') {
                     echo "=== Деплой в Prod через контейнер TESTER ==="
-                    sh "echo 'kubectl apply -f k8s/deployment.yaml -n prod'"
+                    // ИСПРАВЛЕНО: добавляем многострочный блок с шебангом
+                    sh '''#!/bin/sh
+                    echo "kubectl apply -f k8s/deployment.yaml -n prod"
+                    '''
                 }
             }
         }
-    }
+
+
 
     post {
         always {
