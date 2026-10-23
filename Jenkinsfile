@@ -1,5 +1,4 @@
 pipeline {
-    // Декларируем динамический под агента в Kubernetes
     agent {
         kubernetes {
             yaml """
@@ -9,16 +8,13 @@ metadata:
   labels:
     app: jenkins-dynamic-agent
   annotations:
-    # Важнейшая аннотация из подсказки к заданию: отключаем Istio-сайдкар
     sidecar.istio.io/inject: "false"
 spec:
   containers:
-  # Контейнер 1: Инструменты сборки (используем alpine c curl для тестов)
   - name: builder
     image: alpine:3.18
     command: ["sleep"]
     args: ["99d"]
-  # Контейнер 2: Линтер и инструменты тестирования
   - name: tester
     image: alpine:3.18
     command: ["sleep"]
@@ -41,13 +37,12 @@ spec:
     stages {
         stage('Checkout Code') {
             steps {
-                // Скачивание кода из Git всегда происходит в дефолтном системном контейнере jnlp
                 checkout scm
                 echo "Код успешно загружен в динамический под агента!"
             }
         }
 
-         stage('Lint Dockerfile') {
+        stage('Lint Dockerfile') {
             steps {
                 container('tester') {
                     echo "=== Выполнение линтинга в контейнере TESTER ==="
@@ -55,7 +50,6 @@ spec:
                     sh '''#!/bin/sh
                     hostname
                     
-                    # Доустанавливаем curl в чистый alpine для скачивания hadolint
                     apk add --no-cache curl
                     if [ ! -f ./hadolint ]; then
                         curl -sSL -o hadolint https://github.com
@@ -78,13 +72,12 @@ spec:
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh """#!/bin/sh
                         echo "Авторизация пользователя \${REG_USER} внутри контейнера builder"
-                        echo "Имитация Cloud-Native сборки образа: \${REGISTRY}/\text{\${IMAGE_NAME}}:\${IMAGE_TAG}"
+                        echo "Имитация Cloud-Native сборки образа: \${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}"
                         """
                     }
                 }
             }
         }
-
 
         stage('Deploy to Pre-Prod') {
             when {
@@ -93,7 +86,6 @@ spec:
             steps {
                 container('tester') {
                     echo "=== Деплой в Pre-Prod через контейнер TESTER ==="
-                    // ИСПРАВЛЕНО: добавляем многострочный блок с шебангом
                     sh '''#!/bin/sh
                     echo "kubectl apply -f k8s/deployment.yaml -n pre-prod"
                     '''
@@ -121,15 +113,13 @@ spec:
             steps {
                 container('tester') {
                     echo "=== Деплой в Prod через контейнер TESTER ==="
-                    // ИСПРАВЛЕНО: добавляем многострочный блок с шебангом
                     sh '''#!/bin/sh
                     echo "kubectl apply -f k8s/deployment.yaml -n prod"
                     '''
                 }
             }
         }
-
-
+    }
 
     post {
         always {
