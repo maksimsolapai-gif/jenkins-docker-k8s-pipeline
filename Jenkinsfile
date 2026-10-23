@@ -47,14 +47,14 @@ spec:
             }
         }
 
-        stage('Lint Dockerfile') {
+         stage('Lint Dockerfile') {
             steps {
-                // Переключаем выполнение команд строго внутрь контейнера 'tester'
                 container('tester') {
                     echo "=== Выполнение линтинга в контейнере TESTER ==="
                     echo "Проверка имени хоста текущего контейнера (имя динамического пода):"
-                    sh 'hostname'
                     sh '''#!/bin/sh
+                    hostname
+                    
                     # Доустанавливаем curl в чистый alpine для скачивания hadolint
                     apk add --no-cache curl
                     if [ ! -f ./hadolint ]; then
@@ -69,11 +69,12 @@ spec:
 
         stage('Build & Push Image') {
             steps {
-                // Переключаем выполнение команд строго внутрь контейнера 'builder'
                 container('builder') {
                     echo "=== Выполнение сборки в контейнере BUILDER ==="
                     echo "Проверка имени хоста текущего контейнера (то же имя пода):"
-                    sh 'hostname'
+                    sh '''#!/bin/sh
+                    hostname
+                    '''
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh """#!/bin/sh
                         echo "Авторизация пользователя \${REG_USER} внутри контейнера builder"
@@ -83,6 +84,7 @@ spec:
                 }
             }
         }
+
 
         stage('Deploy to Pre-Prod') {
             when {
