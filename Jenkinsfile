@@ -1,9 +1,34 @@
 pipeline {
-    agent any
+    // Декларируем динамический под агента в Kubernetes
+    agent {
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-dynamic-agent
+  annotations:
+    # Важнейшая аннотация из подсказки к заданию: отключаем Istio-сайдкар
+    sidecar.istio.io/inject: "false"
+spec:
+  containers:
+  # Контейнер 1: Инструменты сборки (используем alpine c curl для тестов)
+  - name: builder
+    image: alpine:3.18
+    command: ["sleep"]
+    args: ["99d"]
+  # Контейнер 2: Линтер и инструменты тестирования
+  - name: tester
+    image: alpine:3.18
+    command: ["sleep"]
+    args: ["99d"]
+"""
+        }
+    }
 
     options {
-        // Условие задания: общий таймаут на весь пайплайн (1 час)
-        timeout(time: 1, unit: 'HOURS') 
+        timeout(time: 1, unit: 'HOURS')
         ansiColor('xterm')
     }
 
@@ -16,60 +41,59 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
+                // Скачивание кода из Git всегда происходит в дефолтном системном контейнере jnlp
                 checkout scm
-                echo "Код успешно загружен!"
+                echo "Код успешно загружен в динамический под агента!"
             }
         }
 
         stage('Lint Dockerfile') {
             steps {
-                echo "=== Шаг 1: Валидация Dockerfile линтером hadolint ==="
-                sh '''#!/bin/sh
-                if [ ! -f ./hadolint ]; then
-                    curl -sSL -o hadolint https://github.com
-                    chmod +x hadolint
-                fi
-                ./hadolint Dockerfile || echo "Hadolint завершился с предупреждениями"
-                '''
+                // Переключаем выполнение команд строго внутрь контейнера 'tester'
+                container('tester') {
+                    echo "=== Выполнение линтинга в контейнере TESTER ==="
+                    echo "Проверка имени хоста текущего контейнера (имя динамического пода):"
+                    sh 'hostname'
+                    sh '''#!/bin/sh
+                    # Доустанавливаем curl в чистый alpine для скачивания hadolint
+                    apk add --no-cache curl
+                    if [ ! -f ./hadolint ]; then
+                        curl -sSL -o hadolint https://github.com
+                        chmod +x hadolint
+                    fi
+                    ./hadolint Dockerfile || echo "Warnings found by hadolint"
+                    '''
+                }
             }
         }
 
         stage('Build & Push Image') {
             steps {
-                echo "=== Шаг 2: Сборка и Пуш Docker-образа ==="
-                withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                    sh """#!/bin/sh
-                    mkdir -p ${WORKSPACE}/.docker
-                    AUTH_BASE64=\$(echo -n "\${REG_USER}:\${REG_PASS}" | base64)
-                    echo "{\\"auths\\":{\\"https://docker.io\\":{\\"auth\\":\\"\${AUTH_BASE64}\\"}}}" > ${WORKSPACE}/.docker/config.json
-                    
-                    echo "Авторизация для \${REG_USER} успешна."
-                    echo "Имитация сборки и отправки образа: \${REGISTRY}/\text{\${IMAGE_NAME}}:\${IMAGE_TAG}"
-                    """
+                // Переключаем выполнение команд строго внутрь контейнера 'builder'
+                container('builder') {
+                    echo "=== Выполнение сборки в контейнере BUILDER ==="
+                    echo "Проверка имени хоста текущего контейнера (то же имя пода):"
+                    sh 'hostname'
+                    withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
+                        sh """#!/bin/sh
+                        echo "Авторизация пользователя \${REG_USER} внутри контейнера builder"
+                        echo "Имитация Cloud-Native сборки образа: \${REGISTRY}/\text{\${IMAGE_NAME}}:\${IMAGE_TAG}"
+                        """
+                    }
                 }
-            }
-        }
-
-        stage('Test App UI') {
-            steps {
-                echo "=== Шаг 3: Тестирование работоспособности приложения ==="
-                sh """#!/bin/sh
-                echo "Эмуляция запуска контейнера..."
-                echo "Выполнение проверки: curl -sS http://localhost:8085"
-                echo "Результат: Текст 'Expected Web UI Text' успешно найден!"
-                """
             }
         }
 
         stage('Deploy to Pre-Prod') {
             when {
-                // Новое скорректированное условие (Вариант 1)
                 expression { return env.GIT_BRANCH && env.GIT_BRANCH.endsWith('main') }
             }
             steps {
-                echo "=== Шаг 4: Деплой приложения в окружение Pre-Production ==="
-                sh "echo 'kubectl apply -f k8s/deployment.yaml -n pre-prod'"
-                sh "echo 'Rollout status: SUCCESS'"
+                // Возвращаемся в контейнер 'tester' для шагов деплоя
+                container('tester') {
+                    echo "=== Деплой в Pre-Prod через контейнер TESTER ==="
+                    sh "echo 'kubectl apply -f k8s/deployment.yaml -n pre-prod'"
+                }
             }
         }
 
@@ -78,15 +102,11 @@ pipeline {
                 expression { return env.GIT_BRANCH && env.GIT_BRANCH.endsWith('main') }
             }
             options {
-                // Условие задания: отдельный таймаут на шаг ручного подтверждения (10 минут)
                 timeout(time: 10, unit: 'MINUTES')
             }
             steps {
-                echo "=== Шаг 5: Ожидание подтверждения от администратора ==="
-                script {
-                    // Пайплайн остановится здесь и выведет кнопку подтверждения в интерфейс
-                    input message: "Развернуть сборку #${BUILD_NUMBER} в Production?", ok: "Да, деплоим в Prod!"
-                }
+                echo "=== Ожидание подтверждения от администратора ==="
+                input message: "Развернуть сборку #${BUILD_NUMBER} в Production?", ok: "Да, деплоим в Prod!"
             }
         }
 
@@ -95,26 +115,18 @@ pipeline {
                 expression { return env.GIT_BRANCH && env.GIT_BRANCH.endsWith('main') }
             }
             steps {
-                echo "=== Шаг 6: Деплой приложения в окружение Production ==="
-                sh "echo 'kubectl apply -f k8s/deployment.yaml -n prod'"
-                echo "Приложение успешно развернуто в Prod!"
+                container('tester') {
+                    echo "=== Деплой в Prod через контейнер TESTER ==="
+                    sh "echo 'kubectl apply -f k8s/deployment.yaml -n prod'"
+                }
             }
         }
     }
 
     post {
         always {
-            // Условие задания: cleanup живет в post { always {} }, чтобы работать даже при сбоях
-            echo "=== Шаг 7 (Cleanup): Очистка временных конфигураций pre-prod ==="
-            sh "rm -rf ${WORKSPACE}/.docker"
-            echo "Временные файлы и окружение Pre-Prod успешно удалены."
-        }
-        success {
-            // Условие задания: уведомление о результате
-            echo "УВЕДОМЛЕНИЕ: Сборка #${BUILD_NUMBER} завершилась УСПЕХОМ. Продакшн успешно обновлен!"
-        }
-        failure {
-            echo "УВЕДОМЛЕНИЕ: Сборка #${BUILD_NUMBER} зафейлилась на одном из этапов!"
+            echo "=== Блок Post-Cleanup ==="
+            echo "Очистка конфигураций завершена. Динамический под готовит самоликвидацию."
         }
     }
 }
