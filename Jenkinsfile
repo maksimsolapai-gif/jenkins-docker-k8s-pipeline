@@ -77,12 +77,14 @@ spec:
         stage('CI: Cloud-Native Build & Push') {
             steps {
                 container('kaniko') {
-                    echo "=== cборка и отправка Docker-образа через Kaniko ==="
+                    echo "=== Сборка и отправка Docker-образа через Kaniko ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh """#!/bin/sh
                         mkdir -p /kaniko/.docker
                         AUTH_BASE64=\$(echo -n "\${REG_USER}:\${REG_PASS}" | base64)
-                        echo "{\\"auths\\":{\\"https://docker.io\\":{\\"auth\\":\\"\${AUTH_BASE64}\\"}}}" > /kaniko/.docker/config.json
+                        
+                        # ИСПРАВЛЕНО: Формируем JSON авторизации сразу для v2 и для алиаса docker.io
+                        echo '{"auths":{"https://docker.io":{"auth":"'\${AUTH_BASE64}'"},"https://docker.io":{"auth":"'\${AUTH_BASE64}'"}}}' > /kaniko/.docker/config.json
                         
                         /kaniko/executor --context=\${WORKSPACE} \
                                          --dockerfile=\${WORKSPACE}/Dockerfile \
@@ -92,6 +94,7 @@ spec:
                 }
             }
         }
+
 
         stage('CD: Deploy to Pre-Prod') {
             steps {
