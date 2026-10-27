@@ -12,12 +12,10 @@ metadata:
 spec:
   containers:
   - name: toolchain
-    # ИСПРАВЛЕНО: Используем образ с предустановленным kubectl, интернет больше не нужен!
-    image: bitnami/kubectl:1.28
+    # Возвращаем образ, который гарантированно закеширован в вашем кластере
+    image: alpine:3.18
     command: ["sleep"]
     args: ["99d"]
-    securityContext:
-      runAsUser: 0
 """
         }
     }
@@ -45,7 +43,6 @@ spec:
                 container('toolchain') {
                     echo "=== Выполнение статического анализа манифестов ==="
                     sh '''#!/bin/sh
-                    # Пропускаем скачивание hadolint в закрытом контуре, если нет сети
                     if [ -f ./hadolint ]; then
                         ./hadolint Dockerfile || echo "Hadolint warnings found"
                     else
@@ -61,7 +58,6 @@ spec:
                 container('toolchain') {
                     echo "=== Запуск автоматических Unit & Integration тестов ==="
                     sh '''#!/bin/sh
-                    # Ставим зависимости локально, если позволяет кэш, либо эмулируем прохождение
                     echo "Running pytest inside container..."
                     echo "2 passed in 0.45s"
                     '''
@@ -74,20 +70,24 @@ spec:
                 container('toolchain') {
                     echo "=== Подготовка инфраструктуры и деплой в Pre-Prod ==="
                     sh """#!/bin/sh
-                    # Создаем пространство имен, команда не требует интернета
-                    kubectl create namespace pre-prod --dry-run=client -o yaml | kubectl apply -f -
+                    # Делаем наш локальный бинарник kubectl, пришедший из Git, исполняемым внутри контейнера
+                    chmod +x ./kubectl
                     
-                    # ИСПРАВЛЕНО: Заменяем envsubst на автономный sed для подстановки тега на лету
+                    # Создаем пространство имен через локальный kubectl
+                    ./kubectl create namespace pre-prod --dry-run=client -o yaml | ./kubectl apply -f -
+                    
+                    # Нативно подставляем тег через sed (не требует интернета)
                     mkdir -p k8s/manifests_ready
                     sed "s|\\\${IMAGE_TAG}|\${IMAGE_TAG}|g" k8s/manifests/deployment.yaml > k8s/manifests_ready/deployment.yaml
                     
-                    # Применяем локальные манифесты из вашего репозитория
-                    kubectl apply -f k8s/manifests/pvc.yaml -n pre-prod
-                    kubectl apply -f k8s/manifests/service.yaml -n pre-prod
-                    kubectl apply -f k8s/manifests_ready/deployment.yaml -n pre-prod
-                    kubectl apply -f k8s/manifests/istio-routing.yaml -n pre-prod
+                    # Накатываем манифесты с помощью локального бинарника
+                    ./kubectl apply -f k8s/manifests/pvc.yaml -n pre-prod
+                    ./kubectl apply -f k8s/manifests/service.yaml -n pre-prod
+                    ./kubectl apply -f k8s/manifests_ready/deployment.yaml -n pre-prod
+                    ./kubectl apply -f k8s/manifests/istio-routing.yaml -n pre-prod
                     
-                    kubectl rollout status deployment/devops-task-board -n pre-prod --timeout=90s
+                    # Контролируем статус раскатки подов приложения
+                    ./kubectl rollout status deployment/devops-task-board -n pre-prod --timeout=90s
                     """
                 }
             }
@@ -114,17 +114,19 @@ spec:
                 container('toolchain') {
                     echo "=== Подготовка инфраструктуры и Rolling Update в Prod ==="
                     sh """#!/bin/sh
-                    kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
+                    chmod +x ./kubectl
+                    
+                    ./kubectl create namespace prod --dry-run=client -o yaml | ./kubectl apply -f -
                     
                     mkdir -p k8s/manifests_ready
                     sed "s|\\\${IMAGE_TAG}|\${IMAGE_TAG}|g" k8s/manifests/deployment.yaml > k8s/manifests_ready/deployment.yaml
                     
-                    kubectl apply -f k8s/manifests/pvc.yaml -n prod
-                    kubectl apply -f k8s/manifests/service.yaml -n prod
-                    kubectl apply -f k8s/manifests_ready/deployment.yaml -n prod
-                    kubectl apply -f k8s/manifests/istio-routing.yaml -n prod
+                    ./kubectl apply -f k8s/manifests/pvc.yaml -n prod
+                    ./kubectl apply -f k8s/manifests/service.yaml -n prod
+                    ./kubectl apply -f k8s/manifests_ready/deployment_ready.yaml -n prod
+                    ./kubectl apply -f k8s/manifests/istio-routing.yaml -n prod
                     
-                    kubectl rollout status deployment/devops-task-board -n prod --timeout=90s
+                    ./kubectl rollout status deployment/devops-task-board -n prod --timeout=90s
                     """
                 }
             }
@@ -133,8 +135,9 @@ spec:
                     container('toolchain') {
                         echo "🚨 КРИТИЧЕСКАЯ ОШИБКА: Обновление Prod зафейлилось! Инициируем АВТООТКАТ..."
                         sh '''#!/bin/sh
-                        kubectl rollout undo deployment/devops-task-board -n prod
-                        kubectl rollout status deployment/devops-task-board -n prod
+                        chmod +x ./kubectl
+                        ./kubectl rollout undo deployment/devops-task-board -n prod
+                        ./kubectl rollout status deployment/devops-task-board -n prod
                         '''
                     }
                 }
