@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: devops-task-board-pvc
+spec:
+  # Используем доступный у вас класс хранения из скриншота 3
+  storageClassName: nfs-client
+  # RWX режим позволит плавно переключать трафик между подами без отключения тома
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi

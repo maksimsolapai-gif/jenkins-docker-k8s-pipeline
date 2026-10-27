@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-task-board
+  labels:
+    app: devops-task-board
+spec:
+  replicas: 2 # Запускаем 2 реплики для отказоустойчивости
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1       # Во время обновления K8s сначала поднимет 1 новый под...
+      maxUnavailable: 0 # ...и ни один старый под не будет выключен до старта нового (Zero Downtime)
+  selector:
+    matchLabels:
+      app: devops-task-board
+  template:
+    metadata:
+      labels:
+        app: devops-task-board
+    spec:
+      containers:
+      - name: container
+        image: docker.io/maksimsolapai-gif/exam-task-board:${IMAGE_TAG}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        # Настройка liveness и readiness проб для автоматического Rollback при сбое
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        # Монтируем постоянное хранилище NFS прямо в папку приложения с SQLite базой данных
+        volumeMounts:
+        - name: database-storage
+          mountPath: /app/data
+      volumes:
+      - name: database-storage
+        persistentVolumeClaim:
+          claimName: devops-task-board-pvc

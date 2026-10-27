@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Task Board</title>
+    <style>
+        body { background-color: #1a202c; color: #fff; font-family: sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        header { display: flex; justify-content: space-between; align-items: center; border-b: 1px solid #4a5568; padding-bottom: 20px; margin-bottom: 30px; }
+        h1 { color: #34d399; margin: 0; }
+        .version { background-color: #2d3748; color: #a0aec0; padding: 5px 10px; rounded-radius: 15px; font-size: 12px; border: 1px solid #4a5568; }
+        .form-box { background-color: #2d3748; padding: 20px; rounded-radius: 8px; border: 1px solid #4a5568; margin-bottom: 30px; max-width: 500px; }
+        input, textarea, select { width: 100%; bg-color: #1a202c; border: 1px solid #4a5568; color: #fff; padding: 8px; margin-bottom: 10px; box-sizing: border-box; border-radius: 4px; }
+        button { background-color: #34d399; color: #1a202c; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #059669; }
+        .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .column { background-color: #2d3748; padding: 15px; border-radius: 8px; border: 1px solid #4a5568; min-height: 400px; }
+        .column h3 { border-bottom: 1px solid #4a5568; padding-bottom: 10px; color: #e2e8f0; margin-top: 0; }
+        .task-card { background-color: #1a202c; padding: 15px; border-radius: 6px; border: 1px solid #4a5568; margin-bottom: 15px; }
+        .task-card h4 { color: #6ee7b7; margin: 0 0 5px 0; }
+        .task-card p { color: #cbd5e0; font-size: 14px; margin: 0 0 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DevOps Exam Task Board</h1>
+            <span class="version">v1.0.0 (SQLite Autonomous)</span>
+        </header>
+
+        <div class="form-box">
+            <h2 style="margin-top:0; color:#e2e8f0; font-size: 18px;">Create New Task</h2>
+            <form action="/task/create" method="POST">
+                <input type="text" name="title" placeholder="Task Title..." required>
+                <textarea name="description" placeholder="Description..."></textarea>
+                <button type="submit">Add to Board</button>
+            </form>
+        </div>
+
+        <div class="board">
+            {% for status, name in [('TODO', 'TO DO'), ('IN_PROGRESS', 'IN PROGRESS'), ('DONE', 'DONE')] %}
+            <div class="column">
+                <h3>{{ name }}</h3>
+                <div>
+                    {% for task in tasks[status] %}
+                    <div class="task-card">
+                        <h4>{{ task.title }}</h4>
+                        <p>{{ task.description or 'No description.' }}</p>
+                        <form action="/task/move/{{ task.id }}" method="POST">
+                            <select name="status" onchange="this.form.submit()">
+                                <option value="TODO" {% if status == 'TODO' %}selected{% endif %}>To Do</option>
+                                <option value="IN_PROGRESS" {% if status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                                <option value="DONE" {% if status == 'DONE' %}selected{% endif %}>Done</option>
+                            </select>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
