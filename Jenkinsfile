@@ -79,18 +79,14 @@ spec:
                 container('kaniko') {
                     echo "=== Сборка и отправка Docker-образа в GitHub Packages (ghcr.io) ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                        sh '''#!/bin/sh
-                        mkdir -p /kaniko/.docker
-                        
-                        # Формируем JSON авторизации специально для ghcr.io
-                        AUTH_BASE64=$(echo -n "${REG_USER}:${REG_PASS}" | base64 | tr -d '\n')
-                        echo "{\"auths\":{\"https://ghcr.io\":{\"auth\":\"${AUTH_BASE64}\"}}}" > /kaniko/.docker/config.json
-                        
-                        # Запуск сборщика Kaniko
-                        /kaniko/executor --context=${WORKSPACE} \
-                                         --dockerfile=${WORKSPACE}/Dockerfile \
-                                         --destination=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-                        '''
+                        sh """#!/bin/sh
+                        # Запуск сборщика Kaniko с нативными флагами авторизации для ghcr.io
+                        /kaniko/executor --context=${WORKSPACE} \\
+                                         --dockerfile=${WORKSPACE}/Dockerfile \\
+                                         --destination=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
+                                         --username=\${REG_USER} \\
+                                         --password=\text{\${REG_PASS}}
+                        """
                     }
                 }
             }
