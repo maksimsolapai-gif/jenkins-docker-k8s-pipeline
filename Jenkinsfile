@@ -79,17 +79,26 @@ spec:
                 container('kaniko') {
                     echo "=== Сборка и отправка Docker-образа через Kaniko ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                        sh """#!/bin/sh
+                        sh '''#!/bin/sh
                         mkdir -p /kaniko/.docker
                         
-                        # Чистая строка JSON без экранирования внутри одинарных кавычек
-                        echo '{"auths":{"https://docker.io":{"username":"'\${REG_USER}'","password":"'\${REG_PASS}'"}}}' > /kaniko/.docker/config.json
+                        # Пишем чистый JSON со строгим указанием официального эндпоинта Docker Hub API
+                        cat <<EOF > /kaniko/.docker/config.json
+{
+  "auths": {
+    "https://docker.io": {
+      "username": "'${REG_USER}'",
+      "password": "'${REG_PASS}'"
+    }
+  }
+}
+EOF
                         
                         # Запуск сборщика
-                        /kaniko/executor --context=\${WORKSPACE} \\
-                                         --dockerfile=\${WORKSPACE}/Dockerfile \\
-                                         --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}
-                        """
+                        /kaniko/executor --context=${WORKSPACE} \
+                                         --dockerfile=${WORKSPACE}/Dockerfile \
+                                         --destination=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        '''
                     }
                 }
             }
