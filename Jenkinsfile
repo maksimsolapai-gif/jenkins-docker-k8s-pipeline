@@ -77,7 +77,7 @@ spec:
         stage('CI: Cloud-Native Build & Push') {
             steps {
                 container('kaniko') {
-                    echo "=== Сборка и отправка Docker-образа через Kaniko ==="
+                    echo "=== cборка и отправка Docker-образа через Kaniko ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh """#!/bin/sh
                         mkdir -p /kaniko/.docker
