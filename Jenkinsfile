@@ -63,7 +63,7 @@ spec:
                     echo "=== Запуск автоматических Unit & Integration тестов ==="
                     sh '''#!/bin/sh
                     apk add --no-cache python3 py3-pip
-                    pip install --break-system-packages fastapi==0.109.2 testclient pytest httpx jinja2 python-multipart uvicorn==0.27.1
+                    pip install --break-system-packages fastapi==0.109.2 pytest httpx jinja2 python-multipart uvicorn==0.27.1
                     
                     mkdir -p /app/data
                     chmod 777 /app/data
