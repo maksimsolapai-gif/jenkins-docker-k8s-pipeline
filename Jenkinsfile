@@ -29,8 +29,8 @@ spec:
     }
 
     environment {
-        REGISTRY        = "docker.io"
-        IMAGE_NAME      = "maksimsolap/exam-task-board"
+        REGISTRY        = "ghrc.io"
+        IMAGE_NAME      = "maksimsolapai-gif/exam-task-board"
         IMAGE_TAG       = "${BUILD_NUMBER}"
     }
 
@@ -77,24 +77,16 @@ spec:
         stage('CI: Cloud-Native Build & Push') {
             steps {
                 container('kaniko') {
-                    echo "=== Сборка и отправка Docker-образа через Kaniko ==="
+                    echo "=== Сборка и отправка Docker-образа в GitHub Packages (ghcr.io) ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh '''#!/bin/sh
                         mkdir -p /kaniko/.docker
                         
-                        # Пишем чистый JSON со строгим указанием официального эндпоинта Docker Hub API
-                        cat <<EOF > /kaniko/.docker/config.json
-{
-  "auths": {
-    "https://docker.io": {
-      "username": "'${REG_USER}'",
-      "password": "'${REG_PASS}'"
-    }
-  }
-}
-EOF
+                        # Формируем JSON авторизации специально для ghcr.io
+                        AUTH_BASE64=$(echo -n "${REG_USER}:${REG_PASS}" | base64 | tr -d '\n')
+                        echo "{\"auths\":{\"https://ghcr.io\":{\"auth\":\"${AUTH_BASE64}\"}}}" > /kaniko/.docker/config.json
                         
-                        # Запуск сборщика
+                        # Запуск сборщика Kaniko
                         /kaniko/executor --context=${WORKSPACE} \
                                          --dockerfile=${WORKSPACE}/Dockerfile \
                                          --destination=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
@@ -103,8 +95,6 @@ EOF
                 }
             }
         }
-
-
 
 
 

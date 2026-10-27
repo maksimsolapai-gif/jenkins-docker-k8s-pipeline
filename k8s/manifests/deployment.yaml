@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: container
-        image: docker.io/maksimsolapai-gif/exam-task-board:${IMAGE_TAG}
+        image: ghcr.io/maksimsolapai-gif/exam-task-board:${IMAGE_TAG}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
