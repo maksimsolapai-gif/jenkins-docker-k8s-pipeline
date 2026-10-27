@@ -21,8 +21,8 @@ spec:
     spec:
       containers:
       - name: container
-        image: ghcr.io/maksimsolapai-gif/exam-task-board:${IMAGE_TAG}
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/maksimsolapai-gif/exam-task-board:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
         # Настройка liveness и readiness проб для автоматического Rollback при сбое
