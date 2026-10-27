@@ -80,12 +80,16 @@ spec:
                     echo "=== Сборка и отправка Docker-образа через Kaniko ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh """#!/bin/sh
+                        # Создаем рабочую папку конфигурации Kaniko
                         mkdir -p /kaniko/.docker
-                        AUTH_BASE64=\$(echo -n "\${REG_USER}:\${REG_PASS}" | base64)
                         
-                        # ИСПРАВЛЕНО: Формируем JSON авторизации сразу для v2 и для алиаса docker.io
-                        echo '{"auths":{"https://docker.io":{"auth":"'\${AUTH_BASE64}'"},"https://docker.io":{"auth":"'\${AUTH_BASE64}'"}}}' > /kaniko/.docker/config.json
+                        # Генерируем base64-хэш авторизации
+                        AUTH_BASE64=\$(echo -n "\${REG_USER}:\${REG_PASS}" | base64 | tr -d '\\n')
                         
+                        # Безопасное формирование JSON без коллизий кавычек и экранирования
+                        printf '{"auths":{"https://docker.io":{"auth":"%s"}}}' "\$AUTH_BASE64" > /kaniko/.docker/config.json
+                        
+                        # Запуск сборщика
                         /kaniko/executor --context=\${WORKSPACE} \
                                          --dockerfile=\${WORKSPACE}/Dockerfile \
                                          --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}
@@ -94,6 +98,7 @@ spec:
                 }
             }
         }
+
 
 
         stage('CD: Deploy to Pre-Prod') {
