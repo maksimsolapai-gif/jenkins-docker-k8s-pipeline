@@ -1,0 +1,23 @@
+# Игнорируем папки систем контроля версий
+.git
+.github
+.gitignore
+
+# Игнорируем кэш Python и виртуальные окружения
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+ENV/
+
+# Игнорируем локальные базы данных и временные папки, протестированные на хосте
+data/
+*.db
+*.swp
+
+# Игнорируем манифесты Kubernetes и логи Jenkins
+k8s/
+Jenkinsfile

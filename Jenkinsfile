@@ -11,10 +11,6 @@ metadata:
     sidecar.istio.io/inject: "false"
 spec:
   containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:v1.14.0-debug
-    command: ["sleep"]
-    args: ["99d"]
   - name: toolchain
     image: alpine:3.18
     command: ["sleep"]
@@ -29,9 +25,10 @@ spec:
     }
 
     environment {
-        REGISTRY        = "ghrc.io"
+        REGISTRY        = "ghcr.io"
         IMAGE_NAME      = "maksimsolapai-gif/exam-task-board"
-        IMAGE_TAG       = "${BUILD_NUMBER}"
+        // Синхронизируем тег: теперь мы берём номер запуска из GitHub Actions, эмулируя его через номер сборки Jenkins c префиксом gh-
+        IMAGE_TAG       = "gh-${BUILD_NUMBER}"
     }
 
     stages {
@@ -73,26 +70,6 @@ spec:
                 }
             }
         }
-
-        stage('CI: Cloud-Native Build & Push') {
-            steps {
-                container('kaniko') {
-                    echo "=== Сборка и отправка Docker-образа в GitHub Packages (ghcr.io) ==="
-                    withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
-                        sh """#!/bin/sh
-                        # Запуск сборщика Kaniko с нативными флагами авторизации для ghcr.io
-                        /kaniko/executor --context=${WORKSPACE} \\
-                                         --dockerfile=${WORKSPACE}/Dockerfile \\
-                                         --destination=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} \\
-                                         --username=\${REG_USER} \\
-                                         --password=\text{\${REG_PASS}}
-                        """
-                    }
-                }
-            }
-        }
-
-
 
         stage('CD: Deploy to Pre-Prod') {
             steps {
@@ -173,9 +150,7 @@ spec:
                 container('toolchain') {
                     sh '''#!/bin/sh
                     apk add --no-cache curl
-                    
-                    PAYLOAD='{"attachments": [{"color": "good", "title": "✅ Jenkins Pipeline: SUCCESS", "text": "Pipeline completed flawlessly. Application has been promoted to Production.", "fields": [{"title": "Project", "value": "DevOps Task Board", "short": true}, {"title": "Build Number", "value": "#'${BUILD_NUMBER}'", "short": true}, {"title": "Environment", "value": "Production (Istio Routed)", "short": true}], "footer": "Jenkins Kubernetes GitOps Agent"}]}'
-                    
+                    PAYLOAD='{"attachments": [{"color": "good", "title": "✅ Jenkins Pipeline: SUCCESS", "text": "Hybrid Pipeline completed. Image built via GitHub Actions and deployed via Jenkins successfully.", "fields": [{"title": "Project", "value": "DevOps Task Board", "short": true}, {"title": "Build Number", "value": "#'${BUILD_NUMBER}'", "short": true}], "footer": "Jenkins Kubernetes Agent"}]}'
                     curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_URL"
                     '''
                 }
@@ -186,9 +161,7 @@ spec:
                 container('toolchain') {
                     sh '''#!/bin/sh
                     apk add --no-cache curl
-                    
-                    PAYLOAD='{"attachments": [{"color": "danger", "title": "🚨 Jenkins Pipeline: FAILED", "text": "The pipeline encountered a critical error during execution.", "fields": [{"title": "Project", "value": "DevOps Task Board", "short": true}, {"title": "Build Number", "value": "#'${BUILD_NUMBER}'", "short": true}], "footer": "Jenkins Kubernetes GitOps Agent"}]}'
-                    
+                    PAYLOAD='{"attachments": [{"color": "danger", "title": "🚨 Jenkins Pipeline: FAILED", "text": "Deployment or tests failed inside the cluster.", "fields": [{"title": "Project", "value": "DevOps Task Board", "short": true}, {"title": "Build Number", "value": "#'${BUILD_NUMBER}'", "short": true}], "footer": "Jenkins Kubernetes Agent"}]}'
                     curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" "$SLACK_URL"
                     '''
                 }

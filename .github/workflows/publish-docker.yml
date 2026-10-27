@@ -34,9 +34,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # Тегируем образ номером запуска GitHub (например, gh-35)
+          # ИСПРАВЛЕНО: используем тип raw для корректной вставки номера запуска
           tags: |
-            type=run_number,prefix=gh-
+            type=raw,value=gh-${{ github.run_number }}
+
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
