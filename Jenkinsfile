@@ -82,18 +82,19 @@ spec:
                         sh """#!/bin/sh
                         mkdir -p /kaniko/.docker
                         
-                        # Передаем логин и токен напрямую в поля конфигурации Kaniko
-                        echo "{\\"auths\\":{\\"https://docker.io\\":{\\"username\\":\\"\${REG_USER}\\",\\"password\\":\\"\${REG_PASS}\\"}}}" > /kaniko/.docker/config.json
+                        # Чистая строка JSON без экранирования внутри одинарных кавычек
+                        echo '{"auths":{"https://docker.io":{"username":"'\${REG_USER}'","password":"'\${REG_PASS}'"}}}' > /kaniko/.docker/config.json
                         
-                        # Запуск сборщика с исправленными переменными путей
-                        /kaniko/executor --context=${WORKSPACE} \
-                                         --dockerfile=${WORKSPACE}/Dockerfile \
-                                         --destination=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        # Запуск сборщика
+                        /kaniko/executor --context=\${WORKSPACE} \\
+                                         --dockerfile=\${WORKSPACE}/Dockerfile \\
+                                         --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}
                         """
                     }
                 }
             }
         }
+
 
 
 
