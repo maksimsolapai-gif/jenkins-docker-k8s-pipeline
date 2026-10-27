@@ -42,9 +42,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # ИСПРАВЛЕНО: используем тип raw для корректной вставки номера запуска
+          # НАСТРОЙКА ТЕГОВ: Генерируем два тега для каждого билда
           tags: |
             type=raw,value=gh-${{ github.run_number }}
+            type=raw,value=latest
 
 
       - name: Build and push Docker image
