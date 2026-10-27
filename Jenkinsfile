@@ -12,9 +12,13 @@ metadata:
 spec:
   containers:
   - name: toolchain
-    image: alpine:3.18
+    # ИСПРАВЛЕНО: Используем готовый образ с установленным kubectl
+    image: bitnami/kubectl:1.28
     command: ["sleep"]
     args: ["99d"]
+    # Запуск от имени root необходим для установки python во время стадии тестов
+    securityContext:
+      runAsUser: 0
 """
         }
     }
@@ -26,8 +30,9 @@ spec:
 
     environment {
         REGISTRY        = "ghcr.io"
-        IMAGE_NAME      = "maksimsolapai-gif/exam-task-board"
-        // Синхронизируем тег: теперь мы берём номер запуска из GitHub Actions, эмулируя его через номер сборки Jenkins c префиксом gh-
+        // ВНИМАНИЕ: Приводим к нижнему регистру имя репозитория, как на скриншоте 2!
+        IMAGE_NAME      = "maksimsolapai-gif/jenkins-docker-k8s-pipeline"
+        // Синхронизируем тег с GitHub Actions (берем номер текущей сборки Jenkins)
         IMAGE_TAG       = "gh-${BUILD_NUMBER}"
     }
 
@@ -43,6 +48,7 @@ spec:
                 container('toolchain') {
                     echo "=== Выполнение статического анализа манифестов ==="
                     sh '''#!/bin/sh
+                    # В образе Bitnami пакетный менеджер -- это alpine (apk)
                     apk add --no-cache curl
                     if [ ! -f ./hadolint ]; then
                         curl -sSL -o hadolint https://github.com
@@ -75,20 +81,23 @@ spec:
             steps {
                 container('toolchain') {
                     echo "=== Подготовка инфраструктуры и деплой в Pre-Prod ==="
-                    sh '''#!/bin/sh
-                    apk add --no-cache kubectl envsubst
-                    
+                    sh """#!/bin/sh
+                    # Идемпотентное создание неймсейпа
                     kubectl create namespace pre-prod --dry-run=client -o yaml | kubectl apply -f -
                     
-                    envsubst < k8s/manifests/deployment.yaml > k8s/manifests/deployment_ready.yaml
+                    # ИСПРАВЛЕНО: Нативно подставляем тег через sed вместо envsubst
+                    mkdir -p k8s/manifests_ready
+                    sed "s|\\\${IMAGE_TAG}|\${IMAGE_TAG}|g" k8s/manifests/deployment.yaml > k8s/manifests_ready/deployment.yaml
                     
+                    # Накатываем манифесты
                     kubectl apply -f k8s/manifests/pvc.yaml -n pre-prod
                     kubectl apply -f k8s/manifests/service.yaml -n pre-prod
-                    kubectl apply -f k8s/manifests/deployment_ready.yaml -n pre-prod
+                    kubectl apply -f k8s/manifests_ready/deployment.yaml -n pre-prod
                     kubectl apply -f k8s/manifests/istio-routing.yaml -n pre-prod
                     
+                    # Контролируем статус раскатки подов приложения
                     kubectl rollout status deployment/devops-task-board -n pre-prod --timeout=90s
-                    '''
+                    """
                 }
             }
         }
@@ -113,20 +122,19 @@ spec:
             steps {
                 container('toolchain') {
                     echo "=== Подготовка инфраструктуры и Rolling Update в Prod ==="
-                    sh '''#!/bin/sh
-                    apk add --no-cache kubectl envsubst
-                    
+                    sh """#!/bin/sh
                     kubectl create namespace prod --dry-run=client -o yaml | kubectl apply -f -
                     
-                    envsubst < k8s/manifests/deployment.yaml > k8s/manifests/deployment_ready.yaml
+                    mkdir -p k8s/manifests_ready
+                    sed "s|\\\${IMAGE_TAG}|\${IMAGE_TAG}|g" k8s/manifests/deployment.yaml > k8s/manifests_ready/deployment.yaml
                     
                     kubectl apply -f k8s/manifests/pvc.yaml -n prod
                     kubectl apply -f k8s/manifests/service.yaml -n prod
-                    kubectl apply -f k8s/manifests/deployment_ready.yaml -n prod
+                    kubectl apply -f k8s/manifests_ready/deployment.yaml -n prod
                     kubectl apply -f k8s/manifests/istio-routing.yaml -n prod
                     
                     kubectl rollout status deployment/devops-task-board -n prod --timeout=90s
-                    '''
+                    """
                 }
             }
             post {
@@ -134,7 +142,6 @@ spec:
                     container('toolchain') {
                         echo "🚨 КРИТИЧЕСКАЯ ОШИБКА: Обновление Prod зафейлилось! Инициируем АВТООТКАТ..."
                         sh '''#!/bin/sh
-                        apk add --no-cache kubectl
                         kubectl rollout undo deployment/devops-task-board -n prod
                         kubectl rollout status deployment/devops-task-board -n prod
                         '''
