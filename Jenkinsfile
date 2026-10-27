@@ -80,19 +80,15 @@ spec:
                     echo "=== Сборка и отправка Docker-образа через Kaniko ==="
                     withCredentials([usernamePassword(credentialsId: 'registry-credentials', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
                         sh """#!/bin/sh
-                        # Создаем рабочую папку конфигурации Kaniko
                         mkdir -p /kaniko/.docker
                         
-                        # Генерируем base64-хэш авторизации
-                        AUTH_BASE64=\$(echo -n "\${REG_USER}:\${REG_PASS}" | base64 | tr -d '\\n')
+                        # Передаем логин и токен напрямую в поля конфигурации Kaniko
+                        echo "{\\"auths\\":{\\"https://index.docker.io/v1/\\":{\\"username\\":\\"\${REG_USER}\\",\\"password\\":\\"\${REG_PASS}\\"}}}" > /kaniko/.docker/config.json
                         
-                        # Безопасное формирование JSON без коллизий кавычек и экранирования
-                        printf '{"auths":{"https://docker.io":{"auth":"%s"}}}' "\$AUTH_BASE64" > /kaniko/.docker/config.json
-                        
-                        # Запуск сборщика
+                        # Запуск сборщика с флагом дебага для детального логирования, если что-то пойдет не так
                         /kaniko/executor --context=\${WORKSPACE} \
-                                         --dockerfile=\${WORKSPACE}/Dockerfile \
-                                         --destination=\${REGISTRY}/\${IMAGE_NAME}:\${IMAGE_TAG}
+                                         --dockerfile=\text{\${WORKSPACE}}/Dockerfile \
+                                         --destination=\text{\${REGISTRY}}/\text{\${IMAGE_NAME}}:\text{\${IMAGE_TAG}}
                         """
                     }
                 }
