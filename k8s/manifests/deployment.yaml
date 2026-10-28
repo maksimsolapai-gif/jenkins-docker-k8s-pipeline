@@ -47,5 +47,5 @@ spec:
           mountPath: /app/data
       volumes:
       - name: database-storage
-        persistentVolumeClaim:
-          claimName: devops-task-board-pvc
+        # Переводим в автономный emptyDir, чтобы убрать зависимость от зависшего NFS-диска
+        emptyDir: {}
