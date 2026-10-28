@@ -81,8 +81,13 @@ jobs:
       # 7. Запуск тестов pytest с генерацией отчета Code Coverage
       - name: 'Automation: Run Pytest & Collect Code Coverage'
         run: |
-          mkdir -p /tmp/app/data
+          # ИСПРАВЛЕНО: Создаем системную папку /app/data на раннере и даем на нее полные права для тестов SQLite
+          sudo mkdir -p /app/data
+          sudo chmod -R 777 /app/data
+          
+          # Запуск тестирования с подсчетом покрытия кода
           PYTHONPATH=. pytest tests/ --cov=main --cov-report=term-missing -v
+
 
   # ЭТАП 2: СБОРКА И ПУШ ОБРАЗА (СТАРТУЕТ ТОЛЬКО ЕСЛИ ВСЕ ТЕСТЫ И СКАНЕРЫ ЗЕЛЕНЫЕ)
   build-and-push:
