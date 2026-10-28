@@ -5,7 +5,7 @@ FROM alpine:3.18.5
 LABEL maintainer="maksimsolapai-gif"
 
 # Установка системных зависимостей с гибкой фиксацией версий
-RUN apk add --no-cache python3~=3.11 py3-pip curl && \
+RUN apk add --no-cache python3~=3.11 py3-pip~=23.1 curl~=8.5 && \
     pip install --no-cache-dir --break-system-packages fastapi==0.111.0 jinja2==3.1.4 python-multipart==0.0.9 uvicorn==0.30.1
 # Создаем рабочую директорию и папку для встроенной базы данных SQLite
 WORKDIR /app
