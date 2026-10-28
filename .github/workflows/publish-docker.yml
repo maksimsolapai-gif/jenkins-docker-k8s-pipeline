@@ -54,7 +54,7 @@ jobs:
 
       # 4. Сканирование зависимостей Python на известные уязвимости (CVE)
       - name: 'Security: Scan Python Dependencies (Trivy)'
-        uses: aquasecurity/trivy-action@0.20.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
