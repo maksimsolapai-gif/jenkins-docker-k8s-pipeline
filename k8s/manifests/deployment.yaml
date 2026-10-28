@@ -24,7 +24,7 @@ spec:
       - name: ghcr-secret
       containers:
       - name: container
-        image: ghcr.io/maksimsolapai-gif/exam-task-board:latest
+        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
