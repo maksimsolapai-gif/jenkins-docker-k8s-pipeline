@@ -5,12 +5,12 @@ metadata:
   labels:
     app: devops-task-board
 spec:
-  replicas: 2 # Запускаем 2 реплики для отказоустойчивости
+  replicas: 2
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1       # Во время обновления K8s сначала поднимет 1 новый под...
-      maxUnavailable: 0 # ...и ни один старый под не будет выключен до старта нового (Zero Downtime)
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: devops-task-board
@@ -19,7 +19,7 @@ spec:
       labels:
         app: devops-task-board
     spec:
-      # Указываем использовать секрет, который расшифрует Sealed Secrets контроллер
+      # КРИТИЧЕСКИ ВАЖНО: Связываем деплоймент с секретом, который расшифровал kubeseal
       imagePullSecrets:
       - name: ghcr-secret
       containers:
@@ -28,7 +28,6 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
-        # Настройка liveness и readiness проб для автоматического Rollback при сбое
         readinessProbe:
           httpGet:
             path: /
@@ -41,11 +40,10 @@ spec:
             port: 8080
           initialDelaySeconds: 10
           periodSeconds: 10
-        # Монтируем постоянное хранилище NFS прямо в папку приложения с SQLite базой данных
         volumeMounts:
         - name: database-storage
           mountPath: /app/data
       volumes:
       - name: database-storage
-        # Переводим в автономный emptyDir, чтобы убрать зависимость от зависшего NFS-диска
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: devops-task-board-pvc
