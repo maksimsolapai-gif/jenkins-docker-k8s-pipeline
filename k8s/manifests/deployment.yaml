@@ -19,6 +19,9 @@ spec:
       labels:
         app: devops-task-board
     spec:
+      # Указываем использовать секрет, который расшифрует Sealed Secrets контроллер
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
       - name: container
         image: ghcr.io/maksimsolapai-gif/exam-task-board:latest
