@@ -30,20 +30,20 @@ jobs:
         uses: actions/checkout@v4
 
       # 1. Проверка секретов: Ищем случайно забытые пароли и токены в коде
-      - name: Security: Scan for Hardcoded Secrets (Gitleaks)
+      - name: 'Security: Scan for Hardcoded Secrets (Gitleaks)'
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
 
       # 2. Статический анализ Dockerfile (Hadolint)
-      - name: Lint: Static Analysis of Dockerfile (Hadolint)
+      - name: 'Lint: Static Analysis of Dockerfile (Hadolint)'
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
 
       # 3. Проверка безопасности Dockerfile на запуск от Non-Root
-      - name: Security: Verify Non-Root User in Dockerfile
+      - name: 'Security: Verify Non-Root User in Dockerfile'
         run: |
           if ! grep -q "USER " Dockerfile; then
             echo "🚨 КРИТИЧЕСКАЯ ОШИБКА: В Dockerfile отсутствует инструкция USER! Приложение работает от root."
@@ -53,7 +53,7 @@ jobs:
           fi
 
       # 4. Сканирование зависимостей Python на известные уязвимости (CVE)
-      - name: Security: Scan Python Dependencies (Trivy)
+      - name: 'Security: Scan Python Dependencies (Trivy)'
         uses: aquasecurity/trivy-action@0.20.0
         with:
           scan-type: 'fs'
@@ -62,14 +62,14 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       # 5. Настройка Python окружения для запуска Pytest
-      - name: Environment: Set up Python
+      - name: 'Environment: Set up Python'
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
 
       # 6. Установка зависимостей и утилиты покрытия кода
-      - name: Environment: Install Test Dependencies
+      - name: 'Environment: Install Test Dependencies'
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then
@@ -79,7 +79,7 @@ jobs:
           fi
 
       # 7. Запуск тестов pytest с генерацией отчета Code Coverage
-      - name: Automation: Run Pytest & Collect Code Coverage
+      - name: 'Automation: Run Pytest & Collect Code Coverage'
         run: |
           mkdir -p /tmp/app/data
           PYTHONPATH=. pytest tests/ --cov=main --cov-report=term-missing -v
