@@ -92,6 +92,8 @@ jobs:
   # ЭТАП 2: СБОРКА И ПУШ ОБРАЗА (СТАРТУЕТ ТОЛЬКО ЕСЛИ ВСЕ ТЕСТЫ И СКАНЕРЫ ЗЕЛЕНЫЕ)
   build-and-push:
     needs: security-and-testing
+    # ДОБАВЛЯЕМ СТРОКУ ОКРУЖЕНИЯ ДЛЯ АКТИВАЦИИ MANUAL GATE:
+    environment: production
     runs-on: ubuntu-latest
     permissions:
       contents: read
