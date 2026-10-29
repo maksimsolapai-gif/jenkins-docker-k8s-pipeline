@@ -89,6 +89,29 @@ jobs:
           PYTHONPATH=. pytest tests/ --cov=main --cov-report=term-missing -v
 
 
+      # УВЕДОМЛЕНИЕ 1: Тесты успешны, требуется подтверждение (Approve)
+      - name: 'Slack Notification: Success (Awaiting Approval)'
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: '#34d399' # Красивый зеленый цвет FastAPI
+          SLACK_TITLE: '✅ CI Tests Passed: Awaiting Manual Gate Approval'
+          SLACK_MESSAGE: "All unit tests and DevSecOps security scanners completed flawlessly.\nPipeline is now on HOLD. Manual deployment approval is required in GitHub Actions UI!"
+          SLACK_FOOTER: 'GitHub Actions Cloud CI Agent'
+
+      # УВЕДОМЛЕНИЕ 2: Тесты или проверки безопасности зафейлились
+      - name: 'Slack Notification: Pipeline Failure'
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: '#f87171' # Насыщенный красный цвет ошибки
+          SLACK_TITLE: '🚨 CI Pipeline CRASHED'
+          SLACK_MESSAGE: "One of the automated security scanners (Hadolint/Trivy/Gitleaks) or Pytest cases encountered a critical failure.\nBuild has been terminated to protect production environment."
+          SLACK_FOOTER: 'GitHub Actions Cloud CI Agent'
+
+
   # ЭТАП 2: СБОРКА И ПУШ ОБРАЗА (СТАРТУЕТ ТОЛЬКО ЕСЛИ ВСЕ ТЕСТЫ И СКАНЕРЫ ЗЕЛЕНЫЕ)
   build-and-push:
     needs: security-and-testing
