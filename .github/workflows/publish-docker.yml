@@ -138,10 +138,10 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # НАСТРОЙКА ТЕГОВ: Генерируем два тега для каждого билда
+          # НАСТРОЙКА ТЕГОВ: Теперь генерируем СТРОГО чистое число (номер запуска)
           tags: |
-            type=raw,value=gh-${{ github.run_number }}
-            type=raw,value=latest
+            type=raw,value=${{ github.run_number }}
+            
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
