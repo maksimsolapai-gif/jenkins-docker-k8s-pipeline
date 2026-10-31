@@ -25,9 +25,8 @@ spec:
       containers:
       - name: container
         # Flux будет автоматически заменять тег на этой строчке:
-        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:gh-5 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
+        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:gh-14 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
         imagePullPolicy: Always
-
         ports:
         - containerPort: 8080
         readinessProbe:
