@@ -5,7 +5,7 @@ metadata:
   labels:
     app: devops-task-board
 spec:
-  replicas: 2
+  # spec.replicas убираем/Flux игнорирует, так как теперь количеством реплик управляет HPA!
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -19,16 +19,35 @@ spec:
       labels:
         app: devops-task-board
     spec:
-      # КРИТИЧЕСКИ ВАЖНО: Связываем деплоймент с секретом, который расшифровал kubeseal
+      # BEST PRACTICE: Отказоустойчивое распределение подов по разным нодам кластера
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - devops-task-board
+              topologyKey: "kubernetes.io/hostname"
       imagePullSecrets:
       - name: ghcr-secret
       containers:
       - name: container
-        # Flux будет автоматически заменять тег на этой строчке:
         image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:gh-14 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
+        # BEST PRACTICE: Жесткие лимиты ресурсов для защиты нод и расчета метрик HPA
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "150m"
         readinessProbe:
           httpGet:
             path: /
@@ -46,5 +65,4 @@ spec:
           mountPath: /app/data
       volumes:
       - name: database-storage
-        persistentVolumeClaim:
-          claimName: devops-task-board-pvc
+        emptyDir: {}
