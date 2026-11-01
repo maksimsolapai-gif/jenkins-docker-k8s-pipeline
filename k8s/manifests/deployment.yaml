@@ -5,7 +5,6 @@ metadata:
   labels:
     app: devops-task-board
 spec:
-  # spec.replicas убираем/Flux игнорирует, так как теперь количеством реплик управляет HPA!
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -19,7 +18,9 @@ spec:
       labels:
         app: devops-task-board
     spec:
-      # BEST PRACTICE: Отказоустойчивое распределение подов по разным нодам кластера
+      # ИСПРАВЛЕНО: Даем права группе на запись в сетевые тома PVC
+      securityContext:
+        fsGroup: 10001
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -36,11 +37,10 @@ spec:
       - name: ghcr-secret
       containers:
       - name: container
-        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:25 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
+        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:latest # {"$imagepolicy": "flux-system:taskboard-image-policy"}
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
-        # BEST PRACTICE: Жесткие лимиты ресурсов для защиты нод и расчета метрик HPA
         resources:
           requests:
             memory: "64Mi"
@@ -48,7 +48,6 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "150m"
-        # ИСПРАВЛЕНО: Полная блокировка прав доступа на уровне контейнера под требования Kube-linter
         securityContext:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
@@ -69,14 +68,11 @@ spec:
         volumeMounts:
         - name: database-storage
           mountPath: /app/data
-        # БЕЗОПАСНОСТЬ: Выделяем FastAPI изолированную временную память для кэша Uvicorn
         - name: ephemeral-tmp
           mountPath: /tmp
       volumes:
       - name: database-storage
-        # ИСПРАВЛЕНО: возвращаем нативный сетевой NFS диск для сохранения состояния при масштабировании
         persistentVolumeClaim:
           claimName: devops-task-board-pvc
-      # Декларируем RAM-диск для системных нужд Python
       - name: ephemeral-tmp
         emptyDir: {}
