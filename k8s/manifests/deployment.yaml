@@ -36,7 +36,7 @@ spec:
       - name: ghcr-secret
       containers:
       - name: container
-        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:14 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
+        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:20 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
