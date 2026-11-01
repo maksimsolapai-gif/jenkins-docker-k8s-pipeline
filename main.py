@@ -55,11 +55,19 @@ async def read_board(request: Request):
     
     tasks = {"TODO": [], "IN PROGRESS": [], "DONE": []}
     for row in rows:
-        if row["status"] in tasks:
-            tasks[row["status"]].append(dict(row))
+        # НОРМАЛИЗАЦИЯ ПРИ ЧТЕНИИ: убираем пробелы, дефисы и переводим в верхний регистр
+        db_status = row["status"].strip().upper().replace("_", " ")
+        
+        # Если статус совпадает, кладем в соответствующую колонку
+        if db_status in tasks:
+            tasks[db_status].append(dict(row))
+        else:
+            # Дефолтный фоллбэк: если статус совсем кривой, принудительно выводим задачу в TODO, чтобы она не терялась
+            tasks["TODO"].append(dict(row))
             
     context = {"request": request, "tasks": tasks}
     return templates.TemplateResponse("index.html", context)
+
 
 @app.post("/task/create")
 async def create_task(title: str = Form(...), description: str = Form(None)):
