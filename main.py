@@ -75,12 +75,15 @@ async def create_task(title: str = Form(...), description: str = Form(None)):
 
 @app.post("/task/move/{task_id}")
 async def move_task(task_id: int, status: str = Form(...)):
-    if status not in ["TODO", "IN PROGRESS", "DONE"]:
-        raise HTTPException(status_code=400, detail="Invalid status")
+    # ИСПРАВЛЕНО: Принудительно очищаем строку от пробелов, переводим в верхний регистр и меняем дефисы/подчеркивания на пробелы
+    normalized_status = status.strip().upper().replace("_", " ")
+    
+    if normalized_status not in ["TODO", "IN PROGRESS", "DONE"]:
+        raise HTTPException(status_code=400, detail=f"Invalid status received: '{status}'")
         
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
+    cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (normalized_status, task_id))
     conn.commit()
     conn.close()
     return RedirectResponse(url="/", status_code=303)
