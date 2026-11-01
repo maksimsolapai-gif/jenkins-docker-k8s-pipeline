@@ -13,17 +13,14 @@ spec:
       restartPolicy: Never
       containers:
       - name: generator
-        # Используем официальный легковесный образ с утилитой hey
         image: williamyeh/hey:latest
-        # -z 60s — крутить тест ровно 60 секунд
-        # -c 50  — поддерживать 50 одновременных соединений
-        command:
-        - hey
-        - -z
-        - 60s
-        - -c
-        - 50
-        - http://cluster.local
+        # ИСПРАВЛЕНО: передаем параметры в args в виде строгого массива строк
+        args:
+        - "-z"
+        - "60s"
+        - "-c"
+        - "50"
+        - "http://cluster.local"
         securityContext:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
