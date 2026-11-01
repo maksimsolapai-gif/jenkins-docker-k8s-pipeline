@@ -18,7 +18,7 @@ spec:
       labels:
         app: devops-task-board
     spec:
-      # ИСПРАВЛЕНО: Даем права группе на запись в сетевые тома PVC
+      # Назначаем права пользователя 10001 для всех смонтированных K8s-дисков
       securityContext:
         fsGroup: 10001
       affinity:
@@ -37,7 +37,7 @@ spec:
       - name: ghcr-secret
       containers:
       - name: container
-        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:26 # {"$imagepolicy": "flux-system:taskboard-image-policy"}
+        image: ghcr.io/maksimsolapai-gif/jenkins-docker-k8s-pipeline:latest # {"$imagepolicy": "flux-system:taskboard-image-policy"}
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
@@ -68,11 +68,22 @@ spec:
         volumeMounts:
         - name: database-storage
           mountPath: /app/data
+        # Монтируем RAM-диски во все потенциальные системные временные директории
         - name: ephemeral-tmp
           mountPath: /tmp
+        - name: ephemeral-vartmp
+          mountPath: /var/tmp
+        - name: ephemeral-shm
+          mountPath: /dev/shm
       volumes:
       - name: database-storage
         persistentVolumeClaim:
           claimName: devops-task-board-pvc
+      # Декларируем RAM-диски в оперативной памяти ноды для безопасных транзакций
       - name: ephemeral-tmp
         emptyDir: {}
+      - name: ephemeral-vartmp
+        emptyDir: {}
+      - name: ephemeral-shm
+        emptyDir:
+          medium: Memory # Инициализируем истинную Shared Memory для SQLite-блокировок
