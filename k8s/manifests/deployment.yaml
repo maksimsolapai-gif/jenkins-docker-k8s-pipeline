@@ -65,4 +65,6 @@ spec:
           mountPath: /app/data
       volumes:
       - name: database-storage
-        emptyDir: {}
+        # ИСПРАВЛЕНО: возвращаем нативный сетевой NFS диск для сохранения состояния при масштабировании
+        persistentVolumeClaim:
+          claimName: devops-task-board-pvc

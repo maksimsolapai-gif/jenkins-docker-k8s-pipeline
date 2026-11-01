@@ -12,6 +12,7 @@ on:
       - 'Dockerfile'       # Изменения в самом Docker-конвейере
       - '.dockerignore'    # Обновление правил исключения сборщика
       - 'requirements.txt' # Обновление зависимостей пакетов
+      - 'k8s/manifests/**'
 
 env:
   REGISTRY: ghcr.io
@@ -51,6 +52,12 @@ jobs:
           else
             echo "✅ Успешно: Инструкция USER обнаружена в Dockerfile."
           fi
+
+      # НОВЫЙ ШАГ: Проверка манифестов K8s на уязвимости и соответствие стандартам IaC
+      - name: 'Lint: Validate K8s Manifests (Kube-linter)'
+        uses: stackrox/kube-linter-action@v1.0.4
+        with:
+          directory: k8s/manifests
 
       # 4. Сканирование зависимостей Python на известные уязвимости (CVE)
       - name: 'Security: Scan Python Dependencies (Trivy)'
@@ -150,3 +157,18 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      # НОВЫЙ ШАГ: Автоматический нагрузочный стресс-тест через утилиту k6
+      - name: 'Automation: Run Load Testing (Grafana k6)'
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: tests/load_test_k6.js
+
+      - name: 'Slack Notification: Release Deployed'
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: '#2563eb'
+          SLACK_TITLE: '🚀 Production Release Active'
+          SLACK_MESSAGE: "Image v${{ github.run_number }} published. Load tests completed successfully. Flux CD is replicating changes with HPA and Anti-Affinity rules enabled!"
