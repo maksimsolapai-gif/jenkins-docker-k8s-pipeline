@@ -69,8 +69,14 @@ spec:
         volumeMounts:
         - name: database-storage
           mountPath: /app/data
+        # БЕЗОПАСНОСТЬ: Выделяем FastAPI изолированную временную память для кэша Uvicorn
+        - name: ephemeral-tmp
+          mountPath: /tmp
       volumes:
       - name: database-storage
         # ИСПРАВЛЕНО: возвращаем нативный сетевой NFS диск для сохранения состояния при масштабировании
         persistentVolumeClaim:
           claimName: devops-task-board-pvc
+      # Декларируем RAM-диск для системных нужд Python
+      - name: ephemeral-tmp
+        emptyDir: {}
