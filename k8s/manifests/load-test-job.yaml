@@ -4,7 +4,8 @@ metadata:
   name: hpa-load-generator-job
   namespace: prod
 spec:
-  ttlSecondsAfterFinished: 50
+  # Время жизни выполненного пода после завершения (30 секунд), чтобы он сам удалялся из k9s
+  ttlSecondsAfterFinished: 30
   template:
     metadata:
       labels:
@@ -14,19 +15,19 @@ spec:
       containers:
       - name: generator
         image: busybox:1.28
+        # ИСПРАВЛЕНО: Цикл работает ровно 60 секунд, после чего под успешно завершается!
         command: 
         - /bin/sh
         - -c
         - |
-          echo "🚀 Старт нагрузочного тестирования для HPA..."
-          i=1
-          while [ $i -le 50000 ]
+          echo "🚀 Старт нагрузочного тестирования на 60 секунд..."
+          END_TIME=$(( $(date +%s) + 60 ))
+          while [ $(date +%s) -lt $END_TIME ]
           do
             wget -q -O- http://devops-task-board:8080/ > /dev/null
-            i=$((i+1))
+            sleep 0.001
           done
-          echo "✅ Нагрузочный тест завершен! 50 000 запросов отправлено."
-        # ИСПРАВЛЕНО ПОД ТРЕБОВАНИЯ KUBE-LINTER
+          echo "✅ 60 секунд истекли. Нагрузочный тест успешно завершен!"
         securityContext:
           readOnlyRootFilesystem: true
           runAsNonRoot: true
