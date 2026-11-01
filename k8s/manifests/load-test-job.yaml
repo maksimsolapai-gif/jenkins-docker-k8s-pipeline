@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hpa-load-generator-job
+  namespace: prod
+spec:
+  # Время жизни выполненного пода после завершения (60 секунд), чтобы не засорять k9s
+  ttlSecondsAfterFinished: 60
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: generator
+        image: busybox:1.28
+        # Цикл: делает ровно 50 000 быстрых запросов во внутренний сервис приложения
+        command: 
+        - /bin/sh
+        - -c
+        - |
+          echo "🚀 Старт нагрузочного тестирования для HPA..."
+          i=1
+          while [ $i -le 50000 ]
+          do
+            wget -q -O- http://devops-task-board:8080/ > /dev/null
+            i=$((i+1))
+          done
+          echo "✅ Нагрузочный тест завершен! 50 000 запросов отправлено."
