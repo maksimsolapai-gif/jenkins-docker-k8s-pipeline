@@ -48,6 +48,12 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "150m"
+        # ИСПРАВЛЕНО: Полная блокировка прав доступа на уровне контейнера под требования Kube-linter
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          allowPrivilegeEscalation: false
         readinessProbe:
           httpGet:
             path: /
