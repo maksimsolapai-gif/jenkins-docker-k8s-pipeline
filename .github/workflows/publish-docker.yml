@@ -12,7 +12,7 @@ on:
       - 'Dockerfile'       # Изменения в самом Docker-конвейере
       - '.dockerignore'    # Обновление правил исключения сборщика
       - 'requirements.txt' # Обновление зависимостей пакетов
-      - 'k8s/manifests/**'
+
 
 env:
   REGISTRY: ghcr.io
@@ -21,6 +21,8 @@ env:
 jobs:
   # ЭТАП 1: КОМПЛЕКСНАЯ ПРОВЕРКА БЕЗОПАСНОСТИ И ТЕСТИРОВАНИЕ
   security-and-testing:
+    # ДОБАВЛЕНО: Проверяем, что коммит пришел НЕ от робота Flux. Если это коммит автоматизации — шаг пропускается!
+    if: "!contains(github.event.head_commit.message, 'chore(gitops)')"
     runs-on: ubuntu-latest
     permissions:
       contents: read
