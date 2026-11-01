@@ -6,72 +6,81 @@ from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="DevOps Task Board")
 
-# ???? ? ?????????? ???? ?????? (????? /app/data ????? ????????????? ????? PVC)
 DB_DIR = "/app/data"
 DB_PATH = os.path.join(DB_DIR, "tasks.db")
 
-# ??????????? ??????? ????? ??? ??
-os.makedirs(DB_DIR, exist_ok=True)
+# ИСПРАВЛЕНО: Безопасный вызов создания папки. Если файловая система Read-Only, 
+# но папка уже примонтирована через PVC, мы игнорируем ошибку ОС.
+try:
+    os.makedirs(DB_DIR, exist_ok=True)
+except OSError:
+    pass
+
+# ИСПРАВЛЕНО: Выносим подключение в единую функцию с таймаутом и PRAGMA-настройками
+def get_db_connection():
+    # timeout=20 заставляет поды HPA ждать своей очереди на запись до 20 секунд вместо падения в 500 ошибку
+    conn = sqlite3.connect(DB_PATH, timeout=20.0)
+    # Переводим журнал транзакций в оперативную память (RAM), чтобы не писать блокировки на NFS
+    conn.execute("PRAGMA journal_mode=MEMORY;")
+    conn.execute("PRAGMA synchronous=OFF;")
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
-    """????????????? ??????????? ?????????? ?? SQLite"""
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT,
-                status TEXT DEFAULT 'TODO'
-            )
-        """)
-        conn.commit()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT DEFAULT 'TODO'
+        )
+    """)
+    conn.commit()
+    conn.close()
 
-# ?????????????? ?? ??? ??????? ??????????
+# Инициализация БД при старте
 init_db()
 
-# ????????? ???????? UI
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_board(request: Request):
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM tasks")
-        rows = cursor.fetchall()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM tasks")
+    rows = cursor.fetchall()
+    conn.close()
     
-    tasks = {"TODO": [], "IN_PROGRESS": [], "DONE": []}
+    tasks = {"TODO": [], "IN PROGRESS": [], "DONE": []}
     for row in rows:
         if row["status"] in tasks:
-            # ??????????: ??????????? Row ? ??????? ??????? Python dict(row)
             tasks[row["status"]].append(dict(row))
             
-    # ???????? ???????? ? ??????????, ?????? ????
     context = {"request": request, "tasks": tasks}
     return templates.TemplateResponse("index.html", context)
 
-
 @app.post("/task/create")
 async def create_task(title: str = Form(...), description: str = Form(None)):
-    """???????? ???????????????? ?????? ? ??"""
     if not title.strip():
         raise HTTPException(status_code=400, detail="Title cannot be empty")
         
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO tasks (title, description, status) VALUES (?, ?, 'TODO')", (title, description))
-        conn.commit()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO tasks (title, description, status) VALUES (?, ?, 'TODO')", (title, description))
+    conn.commit()
+    conn.close()
     return RedirectResponse(url="/", status_code=303)
 
 @app.post("/task/move/{task_id}")
 async def move_task(task_id: int, status: str = Form(...)):
-    """?????????? ??????? ?????? (??????-??????)"""
-    if status not in ["TODO", "IN_PROGRESS", "DONE"]:
+    if status not in ["TODO", "IN PROGRESS", "DONE"]:
         raise HTTPException(status_code=400, detail="Invalid status")
         
-    with sqlite3.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
-        conn.commit()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE tasks SET status = ? WHERE id = ?", (status, task_id))
+    conn.commit()
+    conn.close()
     return RedirectResponse(url="/", status_code=303)
