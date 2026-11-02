@@ -7,7 +7,7 @@
 
 ## 1. Application Description
 
-* **Application Name:** DevOps Kanban Task Board
+* **Application Name:** DevOps Task Board
 * **Tech Stack:** Python (FastAPI, Uvicorn, Jinja2)
 * **Database:** SQLite 
 * **Project Endpoints & Assets:**
