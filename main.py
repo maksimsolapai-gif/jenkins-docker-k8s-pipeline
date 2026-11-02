@@ -6,7 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 app = FastAPI(title="DevOps Task Board")
 
-# Путь к встроенной базе данных (папка /app/data будет монтироваться через PVC)
+# Путь к встроенной базе данных (папка /app/data будет монтироваться через PVCvcvc)
 DB_DIR = "/app/data"
 DB_PATH = os.path.join(DB_DIR, "tasks.db")
 
