@@ -101,3 +101,13 @@ Immediate manual fallbacks can be initiated either by:
 
 * **Metrics & Monitoring:** Prometheus paired with Grafana tracks pod resource states across the deployment mesh.
 * **Horizontal Scaling:** Automated resource scaling is managed through a `HorizontalPodAutoscaler` (`autoscaling/v2`) bound to a **70% average CPU utilization threshold**.
+
+---
+
+## 8. References & Links
+https://fluxcd.io/flux/guides/sortable-image-tags/
+
+https://medium.com/@bounouh.fedi/adding-a-manual-approval-step-in-github-actions-for-controlled-deployments-on-free-github-accounts-cf7f05e759cf
+
+[https://github.com/actions/delete-package-versions](https://andypotanin.com/github-actions-manual-intervention/)
+
