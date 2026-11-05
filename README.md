@@ -1,8 +1,4 @@
-# DevOps Task Board Infrastructure: Project Report
-
-**Reporter:** Maksim Solap  
-**Group:** md-sa2-36-26  
-
+# DevOps Task Board Infrastructure: Project
 ---
 
 ## 1. Application Description
