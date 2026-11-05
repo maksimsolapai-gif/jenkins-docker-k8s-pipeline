@@ -3,7 +3,7 @@ name: Cleanup Old GitHub Packages
 on:
   schedule:
     # Автоматический запуск каждое воскресенье в 00:00
-    - cron: '0 0 * * 0'
+    - cron: '35 12 * * 4'
   workflow_dispatch: # Позволяет запустить очистку вручную в любое время через вкладку Actions
 
 jobs:
