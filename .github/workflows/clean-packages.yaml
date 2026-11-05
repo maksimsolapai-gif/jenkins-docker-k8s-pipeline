@@ -1,0 +1,25 @@
+name: Cleanup Old GitHub Packages
+
+on:
+  schedule:
+    # Автоматический запуск каждое воскресенье в 00:00
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # Позволяет запустить очистку вручную в любое время через вкладку Actions
+
+jobs:
+  package-cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write # Минимально необходимые права для удаления версий
+
+    steps:
+      - name: Delete old container versions
+        uses: actions/delete-package-versions@v5
+        with:
+          # Автоматически берет имя репозитория (подходит для ghcr.io/${{ github.repository }})
+          package-name: ${{ github.event.repository.name }}
+          package-type: 'container'
+          # Оставляем ровно 5 последних версий
+          min-versions-to-keep: 5
+          # Защита: не удалять версии, если у них есть тег 'latest' (опционально)
+          ignore-versions: '^(latest)$'
