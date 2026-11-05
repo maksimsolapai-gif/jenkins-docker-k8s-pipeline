@@ -108,9 +108,7 @@ Immediate manual fallbacks can be initiated either by:
 ---
 
 ## 8. References & Links
-https://fluxcd.io/flux/guides/sortable-image-tags/
-
-https://medium.com/@bounouh.fedi/adding-a-manual-approval-step-in-github-actions-for-controlled-deployments-on-free-github-accounts-cf7f05e759cf
-
-[https://github.com/actions/delete-package-versions](https://andypotanin.com/github-actions-manual-intervention/)
+* https://fluxcd.io/flux/guides/sortable-image-tags/
+* https://medium.com/@bounouh.fedi/adding-a-manual-approval-step-in-github-actions-for-controlled-deployments-on-free-github-accounts-cf7f05e759cf
+* [https://github.com/actions/delete-package-versions](https://andypotanin.com/github-actions-manual-intervention/)
 
