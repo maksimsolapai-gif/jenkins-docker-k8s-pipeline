@@ -1,4 +1,7 @@
-# DevOps Task Board Infrastructure: Project
+# DevOps Task Board: GitOps & DevSecOps Infrastructure
+
+This repository demonstrates a production-ready, highly available, and secure infrastructure deployment using GitOps and DevSecOps best practices for the DevOps Task Board application.
+
 ---
 
 ## 1. Application Description
