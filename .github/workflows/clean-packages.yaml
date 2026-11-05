@@ -2,24 +2,22 @@ name: Cleanup Old GitHub Packages
 
 on:
   schedule:
-    # Автоматический запуск каждое воскресенье в 00:00
-    - cron: '35 12 * * 4'
-  workflow_dispatch: # Позволяет запустить очистку вручную в любое время через вкладку Actions
+    # Запуск каждый понедельник в 00:00
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Позволяет запускать вручную в любое время
 
 jobs:
   package-cleanup:
     runs-on: ubuntu-latest
     permissions:
-      packages: write # Минимально необходимые права для удаления версий
+      packages: write
 
     steps:
       - name: Delete old container versions
         uses: actions/delete-package-versions@v5
         with:
-          # Автоматически берет имя репозитория (подходит для ghcr.io/${{ github.repository }})
-          package-name: ${{ github.event.repository.name }}
+          # Точное имя пакета со скриншота
+          package-name: 'jenkins-docker-k8s-pipeline'
           package-type: 'container'
-          # Оставляем ровно 5 последних версий
+          # Оставляем ровно 5 последних версий (на скрине видны 33, 32, 31, 30, 29 и т.д.)
           min-versions-to-keep: 5
-          # Защита: не удалять версии, если у них есть тег 'latest' (опционально)
-          ignore-versions: '^(latest)$'
